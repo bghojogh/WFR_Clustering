@@ -144,9 +144,6 @@ class WFR(object):
             clusters: List[List[int]]
                 List of clusters, each cluster is a list of point indices
         """
-        # get n (sample size) and d (dimensionality):
-        n, d = X.shape
-
         if resemblance_fn is None:
             resemblance_fn = resemblance_functions.cosine_resemblance
 
@@ -180,14 +177,7 @@ class WFR(object):
         # Build graph adjacency (boolean)
         adjacency = R_thresh > 0
 
-        if mark_outliers_as_minus_one:
-            # Degree excluding self-loops
-            degrees = adjacency.sum(axis=1) - np.diag(adjacency)
-            
-            # Mark outliers (degree 0)
-            outliers = degrees == 0
-        
-        # Ensure self-loops for DFS
+        # Ensure self-loops for DFS or BFS
         np.fill_diagonal(adjacency, True)
 
         # Find connected components (DFS or BFS)
@@ -197,13 +187,6 @@ class WFR(object):
         cluster_id = 0
         clusters = []
         for i in range(n):
-
-            # Skip explicit outliers if requested
-            if mark_outliers_as_minus_one and outliers[i]:
-                visited[i] = True
-                labels[i] = -1
-                continue
-
             if not visited[i]:
                 if search_algorithm == "DFS":
                     # it is a stack
@@ -231,6 +214,12 @@ class WFR(object):
 
                 clusters.append(cluster)
                 cluster_id += 1
+
+        # optionally mark degree-0 nodes as -1
+        if mark_outliers_as_minus_one:
+            degrees = adjacency.sum(axis=1)
+            print(degrees)
+            labels[degrees <= 1] = -1  # degree 0 except self-loop
 
         return R, labels, clusters
 
