@@ -177,6 +177,9 @@ class WFR(object):
         # Build graph adjacency (boolean)
         adjacency = R_thresh > 0
 
+        # make the adjacency matrix symmtric (it may be asymetric when k < n in KNN)
+        adjacency = adjacency | adjacency.T  # ensure symmetry
+
         # Ensure self-loops for DFS or BFS
         np.fill_diagonal(adjacency, True)
 
