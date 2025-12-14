@@ -1,6 +1,7 @@
 import resemblance_functions
 import numpy as np
-from typing import Callable, Optional, List
+from collections import deque
+from typing import Callable, Optional
 
 
 class WFR(object):
@@ -83,8 +84,9 @@ class WFR(object):
         self,
         X: np.ndarray,
         resemblance_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-        resemblance_threshold: float = 0.5,
-        mark_outliers_as_minus_one: bool = False
+        resemblance_threshold: Optional[float] = 0.5,
+        mark_outliers_as_minus_one: Optional[bool] = False,
+        search_algorithm: Optional[str] = "DFS"
     ):
         """
         Args:
@@ -97,6 +99,8 @@ class WFR(object):
                 Value in [0, 1] for thresholding normalized resemblance matrix.
             mark_outliers_as_minus_one: bool
                 Whether to mark outliers as -1 or not (as singleton clusters).
+            search_algorithm: str
+                Options are "DFS" (for depth-first search) and "BFS" (for breadth-first search). It does not have impact on the algorithm.
 
         Returns:
             resemblance_matrix: np.ndarray
@@ -150,11 +154,19 @@ class WFR(object):
                 continue
 
             if not visited[i]:
-                stack = [i]
+                if search_algorithm == "DFS":
+                    # it is a stack
+                    stack_or_queue = [i]
+                elif search_algorithm == "BFS":
+                    # it is a queue
+                    stack_or_queue = deque([i])
                 cluster = []
 
-                while stack:
-                    node = stack.pop()
+                while stack_or_queue:
+                    if search_algorithm == "DFS":
+                        node = stack_or_queue.pop()
+                    elif search_algorithm == "BFS":
+                        node = stack_or_queue.popleft()
                     if visited[node]:
                         continue
                     visited[node] = True
@@ -164,7 +176,7 @@ class WFR(object):
                     neighbors = np.where(adjacency[node])[0]
                     for nb in neighbors:
                         if not visited[nb]:
-                            stack.append(nb)
+                            stack_or_queue.append(nb)
 
                 clusters.append(cluster)
                 cluster_id += 1
