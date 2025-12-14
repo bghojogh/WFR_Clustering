@@ -61,10 +61,61 @@ class WFR(object):
 
         X_test = X.astype(float)
         X_train = self.X_.astype(float)
+        n_test = X_test.shape[0]
+        n_train = X_train.shape[0]
 
         # resemblance between test points and training points
         resemblance_fn = self.get_resemblance_function()
-        R_new = resemblance_fn(X_test, X_train)
+
+        # Full graph approach:
+        if self.knn_k is None:
+            R_new = resemblance_fn(X_test, X_train)
+
+        # KNN approach:
+        else:
+            # use KNN graph
+            n = X.shape[0]
+            match self.knn_approx_method:
+                case None:
+                    nbrs = NearestNeighbors(n_neighbors=min(knn_k, n), algorithm=self.knn_sklearn_algorithm).fit(X)
+                    distances, indices = nbrs.kneighbors(X_test)
+                    # compute resemblance only for neighbors
+                    R_new = np.zeros((n_test, n_train))
+                    for i, neighbors in enumerate(indices):
+                        for j in neighbors:
+                            R_new[i, j] = resemblance_fn(X_test[i:i+1], X_train[j:j+1])[0, 0]
+                
+                case "faiss":
+                    if resemblance_fn.__name__ != "cosine_resemblance":
+                        raise AssertionError("The FAISS approximation method for KNN can be used only when the resemblance function is cosine!")
+                    import faiss   # "pip install faiss-cpu" OR "pip install faiss-gpu-cu11"
+                    # Normalize X to unit vectors for cosine similarity
+                    d = X_train.shape[1]
+                    X_train_norm = X_train / np.linalg.norm(X_train, axis=1, keepdims=True)
+                    X_test_norm = X_test / np.linalg.norm(X_test, axis=1, keepdims=True)
+                    index = faiss.IndexFlatIP(d)
+                    index.add(X_train_norm.astype(np.float32))
+                    D, I = index.search(X_test_norm.astype(np.float32), knn_k)
+                    R_new = np.zeros((n_test, n_train))
+                    for i in range(n_test):
+                        for j_idx, sim in zip(I[i], D[i]):
+                            R_new[i, j_idx] = sim
+
+                case "hnsw":
+                    if resemblance_fn.__name__ != "cosine_resemblance":
+                        raise AssertionError("The HNSW approximation method for KNN can be used only when the resemblance function is cosine!")
+                    import hnswlib    # pip install hnswlib
+                    # Build HNSW index
+                    d = X_train.shape[1]
+                    p = hnswlib.Index(space='cosine', dim=d)
+                    p.init_index(max_elements=n_train, ef_construction=200, M=16)
+                    p.add_items(X_train.astype(np.float32))
+                    p.set_ef(knn_k * 2)
+                    I, D = p.knn_query(X_test.astype(np.float32), k=knn_k)
+                    R_new = np.zeros((n_test, n_train))
+                    for i in range(n_test):
+                        for j_idx, dist in zip(I[i], D[i]):
+                            R_new[i, j_idx] = 1 - dist  # convert cosine distance -> similarity
 
         # Normalize using training min/max
         R_new_norm = (R_new - self.R_min_) / (self.R_max_ - self.R_min_)
@@ -131,6 +182,9 @@ class WFR(object):
             clusters: List[List[int]]
                 List of clusters, each cluster is a list of point indices
         """
+        # get n (sample size) and d (dimensionality):
+        n, d = X.shape
+
         if resemblance_fn is None:
             resemblance_fn = resemblance_functions.cosine_resemblance
 
@@ -142,7 +196,6 @@ class WFR(object):
         # KNN approach:
         else:
             # use KNN graph
-            n = X.shape[0]
             match knn_approx_method:
                 case None:
                     nbrs = NearestNeighbors(n_neighbors=min(knn_k, n), algorithm=knn_sklearn_algorithm).fit(X)
@@ -217,7 +270,7 @@ class WFR(object):
         cluster_id = 0
         clusters = []
         for i in range(n):
-            
+
             # Skip explicit outliers if requested
             if mark_outliers_as_minus_one and outliers[i]:
                 visited[i] = True
