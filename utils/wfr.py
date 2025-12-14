@@ -8,10 +8,12 @@ class WFR(object):
     def __init__(
             self, 
             resemblance_threshold: float, 
-            resemblance_measure: Optional[str] = "cosine"
+            resemblance_measure: Optional[str] = "cosine",
+            mark_outliers_as_minus_one: Optional[bool] = False
         ):
         self.resemblance_threshold = resemblance_threshold
         self.resemblance_measure = resemblance_measure
+        self.mark_outliers_as_minus_one = mark_outliers_as_minus_one
         self.X_ = None
         self.labels_ = None
         self.is_fitted_ = False
@@ -25,7 +27,8 @@ class WFR(object):
         R_thresh, labels, _ =self.compute_resemblance_and_clusters(
             X=X, 
             resemblance_fn=self.get_resemblance_function(), 
-            resemblance_threshold=self.resemblance_threshold
+            resemblance_threshold=self.resemblance_threshold,
+            mark_outliers_as_minus_one=self.mark_outliers_as_minus_one
         )
         self.X_ = X
         self.labels_ = labels
@@ -80,7 +83,8 @@ class WFR(object):
         self,
         X: np.ndarray,
         resemblance_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-        resemblance_threshold: float = 0.5
+        resemblance_threshold: float = 0.5,
+        mark_outliers_as_minus_one: bool = False
     ):
         """
         Args:
@@ -91,6 +95,8 @@ class WFR(object):
                 Defaults to cosine similarity.
             resemblance_threshold: float
                 Value in [0, 1] for thresholding normalized resemblance matrix.
+            mark_outliers_as_minus_one: bool
+                Whether to mark outliers as -1 or not (as singleton clusters).
 
         Returns:
             resemblance_matrix: np.ndarray
@@ -119,15 +125,30 @@ class WFR(object):
 
         # Build graph adjacency (boolean)
         adjacency = R_thresh > 0
+
+        if mark_outliers_as_minus_one:
+            # Degree excluding self-loops
+            degrees = adjacency.sum(axis=1) - np.diag(adjacency)
+            
+            # Mark outliers (degree 0)
+            outliers = degrees == 0
+        
+        # Ensure self-loops for DFS
         np.fill_diagonal(adjacency, True)
 
-        # Find connected components (DFS / BFS)
+        # Find connected components (DFS --- Depth-First Search)
         n = adjacency.shape[0]
         visited = np.zeros(n, dtype=bool)
         labels = -np.ones(n, dtype=int)
         cluster_id = 0
         clusters = []
         for i in range(n):
+            # Skip explicit outliers if requested
+            if mark_outliers_as_minus_one and outliers[i]:
+                visited[i] = True
+                labels[i] = -1
+                continue
+
             if not visited[i]:
                 stack = [i]
                 cluster = []
@@ -155,7 +176,10 @@ if __name__ == "__main__":
     np.random.seed(0)
     X = np.random.rand(10, 5)
 
-    wfr = WFR(resemblance_threshold=0.8, resemblance_measure="cosine")
+    resemblance_threshold = 0.8
+    mark_outliers_as_minus_one = False
+
+    wfr = WFR(resemblance_threshold=resemblance_threshold, resemblance_measure="cosine", mark_outliers_as_minus_one=mark_outliers_as_minus_one)
     labels = wfr.fit_predict(X=X)
     print(labels)
 
