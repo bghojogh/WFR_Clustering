@@ -215,11 +215,11 @@ class WFR(object):
                 clusters.append(cluster)
                 cluster_id += 1
 
-        # optionally mark degree-0 nodes as -1
+        # optionally mark singleton clusters as -1
         if mark_outliers_as_minus_one:
-            degrees = adjacency.sum(axis=1)
-            print(degrees)
-            labels[degrees <= 1] = -1  # degree 0 except self-loop
+            for cluster in clusters:
+                if len(cluster) == 1:
+                    labels[cluster[0]] = -1
 
         return R, labels, clusters
 
