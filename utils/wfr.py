@@ -140,7 +140,7 @@ class WFR(object):
         # Ensure self-loops for DFS
         np.fill_diagonal(adjacency, True)
 
-        # Find connected components (DFS --- Depth-First Search)
+        # Find connected components (DFS or BFS)
         n = adjacency.shape[0]
         visited = np.zeros(n, dtype=bool)
         labels = -np.ones(n, dtype=int)
