@@ -144,16 +144,6 @@ datasets = [
         },
     ),
     (
-        varied,
-        {
-            "eps": 0.18,
-            "n_neighbors": 2,
-            "min_samples": 7,
-            "xi": 0.01,
-            "min_cluster_size": 0.2,
-        },
-    ),
-    (
         aniso,
         {
             "eps": 0.15,
@@ -166,6 +156,16 @@ datasets = [
     # (blobs, {"min_samples": 7, "xi": 0.1, "min_cluster_size": 0.2}),
     (blobs_separated, {"min_samples": 7, "xi": 0.1, "min_cluster_size": 0.2}),
     # (no_structure, {}),
+    (
+        varied,
+        {
+            "eps": 0.18,
+            "n_neighbors": 2,
+            "min_samples": 7,
+            "xi": 0.01,
+            "min_cluster_size": 0.2,
+        },
+    ),
 ]
 
 for i_dataset, (dataset, algo_params) in enumerate(tqdm(datasets, "Datasets")):
@@ -242,7 +242,7 @@ for i_dataset, (dataset, algo_params) in enumerate(tqdm(datasets, "Datasets")):
 
     clustering_algorithms = (
         ("WFR", wfr),
-        ("MiniBatch\nKMeans", two_means),
+        ("KMeans", two_means),
         ("Affinity\nPropagation", affinity_propagation),
         ("MeanShift", ms),
         ("Spectral\nClustering", spectral),
