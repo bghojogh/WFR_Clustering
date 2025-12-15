@@ -26,6 +26,7 @@ noisy_circles = datasets.make_circles(
 )
 noisy_moons = datasets.make_moons(n_samples=n_samples, noise=0.05, random_state=seed)
 blobs = datasets.make_blobs(n_samples=n_samples, random_state=seed)
+blobs_separated = datasets.make_blobs(n_samples=n_samples, centers=np.array([[-1, -1], [-1, 1], [0, 0]]), cluster_std=0.3, random_state=seed)
 rng = np.random.RandomState(seed)
 no_structure = rng.rand(n_samples, 2), None
 
@@ -40,6 +41,42 @@ aniso = (X_aniso, y)
 varied = datasets.make_blobs(
     n_samples=n_samples, cluster_std=[1.0, 2.5, 0.5], random_state=random_state
 )
+
+# two spirals:
+def make_two_spirals(n_points=1000, noise=0.5, factor=0.75):
+    """
+    Generates the two-spirals dataset.
+
+    Args:
+        n_points (int): Number of points per spiral. Total points will be 2 * n_points.
+        noise (float): Amount of random noise to add to the coordinates.
+        factor (float): Scaling factor for the spiral radius.
+
+    Returns:
+        tuple: (X, y) where X is the data matrix (coordinates)
+               and y is the labels vector.
+    """
+    # Total points for one spiral
+    n = np.sqrt(np.random.rand(n_points, 1)) * 780 * (2 * np.pi) / 360
+
+    # Spiral 1 coordinates
+    # The 'factor' controls how tightly the spiral is wound.
+    d1x = -np.cos(n) * n * factor + np.random.rand(n_points, 1) * noise
+    d1y = np.sin(n) * n * factor + np.random.rand(n_points, 1) * noise
+
+    # Spiral 2 coordinates (flipped version of Spiral 1)
+    d2x = np.cos(n) * n * factor + np.random.rand(n_points, 1) * noise
+    d2y = -np.sin(n) * n * factor + np.random.rand(n_points, 1) * noise
+
+    # X is the combined data (coordinates)
+    X = np.vstack((np.hstack((d1x, d1y)), np.hstack((d2x, d2y))))
+
+    # y is the label (0 for spiral 1, 1 for spiral 2)
+    y = np.hstack((np.zeros(n_points), np.ones(n_points)))
+
+    return X, y
+
+two_spirals = make_two_spirals(n_points=n_samples)
 
 # ============
 # Set up cluster parameters
@@ -68,6 +105,17 @@ default_base = {
 }
 
 datasets = [
+    (
+        two_spirals,
+        {
+            "damping": 0.77,
+            "preference": -240,
+            "quantile": 0.2,
+            "n_clusters": 2,
+            "min_samples": 7,
+            "xi": 0.08,
+        },
+    ),
     (
         noisy_circles,
         {
@@ -109,8 +157,9 @@ datasets = [
             "min_cluster_size": 0.2,
         },
     ),
-    (blobs, {"min_samples": 7, "xi": 0.1, "min_cluster_size": 0.2}),
-    (no_structure, {}),
+    # (blobs, {"min_samples": 7, "xi": 0.1, "min_cluster_size": 0.2}),
+    (blobs_separated, {"min_samples": 7, "xi": 0.1, "min_cluster_size": 0.2}),
+    # (no_structure, {}),
 ]
 
 for i_dataset, (dataset, algo_params) in enumerate(tqdm(datasets, "Datasets")):
@@ -258,14 +307,15 @@ for i_dataset, (dataset, algo_params) in enumerate(tqdm(datasets, "Datasets")):
         plt.ylim(-2.5, 2.5)
         plt.xticks(())
         plt.yticks(())
-        plt.text(
-            0.99,
-            0.01,
-            ("%.2fs" % (t1 - t0)).lstrip("0"),
-            transform=plt.gca().transAxes,
-            size=15,
-            horizontalalignment="right",
-        )
+        if False:
+            plt.text(
+                0.99,
+                0.01,
+                ("%.2fs" % (t1 - t0)).lstrip("0"),
+                transform=plt.gca().transAxes,
+                size=15,
+                horizontalalignment="right",
+            )
         plot_num += 1
 
 plt.show()
