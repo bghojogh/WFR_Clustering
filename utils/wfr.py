@@ -97,7 +97,7 @@ class WFR(object):
 
     def predict(self, X: np.ndarray) -> np.array:
         if not self.is_fitted_:
-            raise ValueError("The object of WTF class is not fitted (trained) yet!")
+            raise ValueError("The object of WFR class is not fitted (trained) yet!")
 
         X_test = X.astype(float)
         X_train = self.X_.astype(float)
@@ -139,6 +139,7 @@ class WFR(object):
         labels_test[above_threshold] = self.labels_[max_indices[above_threshold]]
 
         return labels_test
+
 
     def get_resemblance_function(self) -> Callable:
         match self.resemblance_measure:
@@ -255,6 +256,13 @@ class WFR(object):
             for cluster_index, cluster in enumerate(clusters):
                 if cluster_index in cluster_indices_to_be_removed:
                     labels[cluster] = -1
+            if -1 in labels:
+                # relabel remaining clusters to start from 0
+                unique_labels = sorted(l for l in set(labels) if l >= 0)
+                label_mapping = {old: new for new, old in enumerate(unique_labels)}
+
+                for old, new in label_mapping.items():
+                    labels[labels == old] = new
 
         return R, labels, clusters
 
