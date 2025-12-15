@@ -43,7 +43,7 @@ varied = datasets.make_blobs(
 )
 
 # two spirals:
-def make_two_spirals(n_points=1000, noise=0.5, factor=0.75):
+def make_two_spirals(n_points=1000, noise=0.5, factor=0.75, random_points=False):
     """
     Generates the two-spirals dataset.
 
@@ -57,7 +57,13 @@ def make_two_spirals(n_points=1000, noise=0.5, factor=0.75):
                and y is the labels vector.
     """
     # Total points for one spiral
-    n = np.sqrt(np.random.rand(n_points, 1)) * 780 * (2 * np.pi) / 360
+    if random_points:
+        # note: random points may have gaps within each spiral, resulting in more than two clusters
+        n = np.sqrt(np.random.rand(n_points, 1)) * 780 * (2 * np.pi) / 360
+    else:
+        offset = 2  # additive constant to offset the spiral from the origin.
+        max_angle = 780 * (2 * np.pi) / 360
+        n = np.linspace(offset, max_angle + offset, n_points).reshape(n_points, 1)
 
     # Spiral 1 coordinates
     # The 'factor' controls how tightly the spiral is wound.
@@ -76,7 +82,7 @@ def make_two_spirals(n_points=1000, noise=0.5, factor=0.75):
 
     return X, y
 
-two_spirals = make_two_spirals(n_points=n_samples)
+two_spirals = make_two_spirals(n_points=n_samples*2, random_points=False)
 
 # ============
 # Set up cluster parameters

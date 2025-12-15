@@ -77,6 +77,7 @@ class WFR(object):
                 R_list.append(R)
 
             # choose the best clustering score:
+            # print(clustering_scores_list)  # uncomment for debugging
             best_clustering_index = np.argmax(clustering_scores_list)
             labels = labels_list[best_clustering_index]
             R = R_list[best_clustering_index]
