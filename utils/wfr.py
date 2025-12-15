@@ -15,13 +15,15 @@ class WFR(object):
             mark_outliers_as_minus_one: Optional[bool] = False,
             knn_k: Optional[int] = 10,
             knn_sklearn_algorithm: Optional[str] = "auto",
-            knn_approx_method: Optional[str] = None
+            knn_approx_method: Optional[str] = None,
+            kernel: Optional[str] = "rbf"
         ) -> None:
         """
         Args:
             resemblance_measure: str, optional
                 The measure for calculating resemblance of data points.
                 Defaults to cosine similarity.
+                Options: cosine, kernel
             resemblance_threshold: float, optional
                 Value in [0, 1] for thresholding normalized resemblance matrix.
                 If not provided, automatic threshold is used, but that will slow down the clustering. 
@@ -39,6 +41,9 @@ class WFR(object):
                 Options are None (for no approximation), "faiss" (Facebook AI Similarity Search), "hnsw" (Hierarchical Navigable Small World)
                 Note that FAISS and HNSW are useful especially for large n (sample size) and high d (dimensionality), giving sublinear search time. 
                 It can be used only when resemblance_fn is cosine_resemblance.
+            kernel: str
+                Options are cosine, linear, poly, rbf, sigmoid
+                Used only when resemblance_measure="kernel"
         """
         self.resemblance_measure = resemblance_measure
         self.resemblance_threshold = resemblance_threshold
@@ -47,6 +52,7 @@ class WFR(object):
         self.knn_k = knn_k
         self.knn_sklearn_algorithm = knn_sklearn_algorithm
         self.knn_approx_method = knn_approx_method
+        self.kernel = kernel
         self.X_ = None
         self.X_mean_ = None
         self.labels_ = None
@@ -146,6 +152,17 @@ class WFR(object):
         match self.resemblance_measure:
             case "cosine":
                 resemblance_fn = resemblance_functions.cosine_resemblance
+            case "kernel":
+                if self.kernel == "cosine":
+                    resemblance_fn = resemblance_functions.kernel_cosine_resemblance
+                elif self.kernel == "linear":
+                    resemblance_fn = resemblance_functions.kernel_linear_resemblance
+                elif self.kernel == "poly":
+                    resemblance_fn = resemblance_functions.kernel_poly_resemblance
+                elif self.kernel == "rbf":
+                    resemblance_fn = resemblance_functions.kernel_rbf_resemblance
+                elif self.kernel == "sigmoid":
+                    resemblance_fn = resemblance_functions.kernel_sigmoid_resemblance
             case _:
                 resemblance_fn = resemblance_functions.cosine_resemblance
         return resemblance_fn

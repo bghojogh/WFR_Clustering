@@ -1,6 +1,14 @@
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from typing import Callable, Optional
+from typing import Callable, Optional, Literal
+from sklearn.metrics.pairwise import (
+    linear_kernel,
+    polynomial_kernel,
+    rbf_kernel,
+    sigmoid_kernel,
+    cosine_similarity,
+)
+KernelType = Literal["cosine", "linear", "poly", "rbf", "sigmoid"]
 
 
 def cosine_resemblance(X: np.ndarray, X2: Optional[np.ndarray] = None) -> np.ndarray:
@@ -23,6 +31,68 @@ def cosine_resemblance(X: np.ndarray, X2: Optional[np.ndarray] = None) -> np.nda
     else:
         R_resemblance = X_norm @ X_norm.T
     return R_resemblance
+
+
+def kernel_resemblance(
+    X: np.ndarray,
+    X2: Optional[np.ndarray] = None,
+    kernel: KernelType = "cosine",
+    **kernel_kwargs,
+) -> np.ndarray:
+    """
+    Compute resemblance (similarity) matrix using sklearn kernel methods.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Shape (n_samples, n_features)
+    X2 : Optional[np.ndarray]
+        Shape (m_samples, n_features). If None, uses X.
+    kernel : str
+        One of {"cosine", "linear", "poly", "rbf", "sigmoid"}
+    kernel_kwargs :
+        Extra arguments passed to the kernel function
+        (e.g., gamma, degree, coef0)
+
+    Returns
+    -------
+    np.ndarray
+        Resemblance (kernel) matrix
+    """
+    # cast to float
+    X = X.astype(float)
+    if X2 is not None:
+        X2 = X2.astype(float)
+
+    if kernel == "cosine":
+        return cosine_similarity(X, X2)
+
+    elif kernel == "linear":
+        return linear_kernel(X, X2)
+
+    elif kernel == "poly":
+        return polynomial_kernel(X, X2, **kernel_kwargs)
+
+    elif kernel == "rbf":
+        return rbf_kernel(X, X2, **kernel_kwargs)
+
+    elif kernel == "sigmoid":
+        return sigmoid_kernel(X, X2, **kernel_kwargs)
+
+    else:
+        raise ValueError(f"Unknown kernel type: {kernel}")
+
+
+def kernel_cosine_resemblance(X: np.ndarray, X2: Optional[np.ndarray] = None) -> np.ndarray:
+    return kernel_resemblance(X=X, X2=X2, kernel="cosine")
+def kernel_linear_resemblance(X: np.ndarray, X2: Optional[np.ndarray] = None) -> np.ndarray:
+    return kernel_resemblance(X=X, X2=X2, kernel="linear")
+def kernel_poly_resemblance(X: np.ndarray, X2: Optional[np.ndarray] = None) -> np.ndarray:
+    return kernel_resemblance(X=X, X2=X2, kernel="poly")
+def kernel_rbf_resemblance(X: np.ndarray, X2: Optional[np.ndarray] = None) -> np.ndarray:
+    return kernel_resemblance(X=X, X2=X2, kernel="rbf")
+def kernel_sigmoid_resemblance(X: np.ndarray, X2: Optional[np.ndarray] = None) -> np.ndarray:
+    return kernel_resemblance(X=X, X2=X2, kernel="sigmoid")
 
 
 def compute_resemblance_by_knn_sklearn(X_train: np.ndarray, X_test: Optional[np.ndarray] = None, 
