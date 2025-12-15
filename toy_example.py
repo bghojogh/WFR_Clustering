@@ -7,10 +7,13 @@ from itertools import cycle, islice
 
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
 from sklearn import cluster, datasets, mixture
 from sklearn.neighbors import kneighbors_graph
 from sklearn.preprocessing import StandardScaler
+
+from utils.wfr import WFR
 
 # ============
 # Generate datasets. We choose the size big enough to see the scalability
@@ -110,7 +113,7 @@ datasets = [
     (no_structure, {}),
 ]
 
-for i_dataset, (dataset, algo_params) in enumerate(datasets):
+for i_dataset, (dataset, algo_params) in enumerate(tqdm(datasets, "Datasets")):
     # update parameters with dataset-specific values
     params = default_base.copy()
     params.update(algo_params)
@@ -177,7 +180,13 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
         random_state=params["random_state"],
     )
 
+    resemblance_threshold = None
+    mark_outliers_as_minus_one = True
+    knn_k = 10
+    wfr = WFR(resemblance_threshold=resemblance_threshold, resemblance_measure="cosine", mark_outliers_as_minus_one=mark_outliers_as_minus_one, knn_k=knn_k)
+
     clustering_algorithms = (
+        ("WFR", wfr),
         ("MiniBatch\nKMeans", two_means),
         ("Affinity\nPropagation", affinity_propagation),
         ("MeanShift", ms),
