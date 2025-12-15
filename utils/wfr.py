@@ -1,27 +1,54 @@
-import resemblance_functions
+from utils import resemblance_functions, clustering_scores
 import numpy as np
 from collections import deque
-from typing import Callable, Optional
+from tqdm import tqdm
+from typing import Callable, Optional, Tuple, List
 
 
 class WFR(object):
     
     def __init__(
             self, 
-            resemblance_threshold: float, 
             resemblance_measure: Optional[str] = "cosine",
+            resemblance_threshold: Optional[float] = None,
+            resemblance_threshold_grid_search_step: Optional[float] = 0.01,
             mark_outliers_as_minus_one: Optional[bool] = False,
-            knn_k: Optional[int] = None,
+            knn_k: Optional[int] = 10,
             knn_sklearn_algorithm: Optional[str] = "auto",
-            knn_approx_method: Optional[str] = None,
-        ):
-        self.resemblance_threshold = resemblance_threshold
+            knn_approx_method: Optional[str] = None
+        ) -> None:
+        """
+        Args:
+            resemblance_measure: str, optional
+                The measure for calculating resemblance of data points.
+                Defaults to cosine similarity.
+            resemblance_threshold: float, optional
+                Value in [0, 1] for thresholding normalized resemblance matrix.
+                If not provided, automatic threshold is used, but that will slow down the clustering. 
+            resemblance_threshold_grid_search_step: float, optional
+                Value in [0, 1] for the step of grid search for the best resemblance_threshold.
+                This is used only when resemblance_threshold is None (not provided).
+            mark_outliers_as_minus_one: bool
+                Whether to mark outliers as -1 or not (as singleton clusters).
+            knn_k: int, optional
+                Use KNN graph with this many neighbors.
+                If given as None, all points are used, i.e., k=n 
+            knn_sklearn_algorithm:
+                algorithm used in KNN of sklearn: {'auto', 'ball_tree', 'kd_tree', 'brute'}
+            knn_approx_method: str
+                Options are None (for no approximation), "faiss" (Facebook AI Similarity Search), "hnsw" (Hierarchical Navigable Small World)
+                Note that FAISS and HNSW are useful especially for large n (sample size) and high d (dimensionality), giving sublinear search time. 
+                It can be used only when resemblance_fn is cosine_resemblance.
+        """
         self.resemblance_measure = resemblance_measure
+        self.resemblance_threshold = resemblance_threshold
+        self.resemblance_threshold_grid_search_step = resemblance_threshold_grid_search_step
         self.mark_outliers_as_minus_one = mark_outliers_as_minus_one
         self.knn_k = knn_k
         self.knn_sklearn_algorithm = knn_sklearn_algorithm
         self.knn_approx_method = knn_approx_method
         self.X_ = None
+        self.X_mean_ = None
         self.labels_ = None
         self.is_fitted_ = False
         self.R_matrix_ = None
@@ -30,16 +57,30 @@ class WFR(object):
 
 
     def fit(self, X: np.ndarray) -> object:
-        # do clustering:
-        R, labels, _ =self.compute_resemblance_and_clusters(
-            X=X, 
-            resemblance_fn=self.get_resemblance_function(), 
-            resemblance_threshold=self.resemblance_threshold,
-            mark_outliers_as_minus_one=self.mark_outliers_as_minus_one,
-            knn_k=self.knn_k,
-            knn_sklearn_algorithm=self.knn_sklearn_algorithm,
-            knn_approx_method=self.knn_approx_method
-        )
+        # center data if necessary:
+        if self.resemblance_measure == "cosine":
+            X_mean = np.mean(X, axis=0, keepdims=True)
+            self.X_mean_ = X_mean
+            X = X - X_mean
+        
+        if self.resemblance_threshold is not None:
+            R, labels, _ =self.compute_resemblance_and_clusters(X=X)
+        else:
+            clustering_scores_list, labels_list, R_list = [], [], []
+            for resemblance_threshold in tqdm(np.arange(1.0, 0-self.resemblance_threshold_grid_search_step, -self.resemblance_threshold_grid_search_step), desc="Grid search for resemblance threshold"):
+                self.resemblance_threshold = resemblance_threshold
+                R, labels, _ =self.compute_resemblance_and_clusters(X=X)
+                clustering_score1 = clustering_scores.graph_cluster_separation_score(X=X[labels!=-1, :], labels=labels[labels!=-1], k=10, eps=1e-8)
+                clustering_score2 = clustering_scores.cluster_size_score(labels=labels[labels!=-1], min_frac=0.05, alpha=2.0)
+                clustering_scores_list.append(clustering_score1 + clustering_score2)
+                labels_list.append(labels)
+                R_list.append(R)
+
+            # choose the best clustering score:
+            best_clustering_index = np.argmax(clustering_scores_list)
+            labels = labels_list[best_clustering_index]
+            R = R_list[best_clustering_index]
+
         self.X_ = X
         self.labels_ = labels
         self.is_fitted_ = True
@@ -60,6 +101,11 @@ class WFR(object):
 
         X_test = X.astype(float)
         X_train = self.X_.astype(float)
+
+        # center data if necessary:
+        if self.resemblance_measure == "cosine":
+            # self.X_ (X_train) is already centered.
+            X_test = X_test - self.X_mean_
 
         # resemblance between test points and training points
         resemblance_fn = self.get_resemblance_function()
@@ -106,35 +152,17 @@ class WFR(object):
     def compute_resemblance_and_clusters(
         self,
         X: np.ndarray,
-        resemblance_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None,
-        resemblance_threshold: Optional[float] = 0.5,
-        mark_outliers_as_minus_one: Optional[bool] = False,
-        knn_k: Optional[int] = None,
-        knn_sklearn_algorithm: Optional[str] = "auto",
-        knn_approx_method: Optional[str] = None,
         search_algorithm: Optional[str] = "DFS",
-    ):
+        outlier_detection_method: Optional[str] = "max_ratio"
+    ) -> Tuple[np.ndarray, List[int], List[List[int]]]:
         """
         Args:
             X: np.ndarray
                 Shape (n, d), n samples and d features
-            resemblance_fn: callable, optional
-                Function that takes X and returns an (n, n) resemblance matrix.
-                Defaults to cosine similarity.
-            resemblance_threshold: float
-                Value in [0, 1] for thresholding normalized resemblance matrix.
-            mark_outliers_as_minus_one: bool
-                Whether to mark outliers as -1 or not (as singleton clusters).
-            knn_k: int, optional
-                If given, use KNN graph with this many neighbors
-            knn_sklearn_algorithm:
-                algorithm used in KNN of sklearn: {'auto', 'ball_tree', 'kd_tree', 'brute'}
-            knn_approx_method: str
-                Options are None (for no approximation), "faiss" (Facebook AI Similarity Search), "hnsw" (Hierarchical Navigable Small World)
-                Note that FAISS and HNSW are useful especially for large n (sample size) and high d (dimensionality), giving sublinear search time. 
-                It can be used only when resemblance_fn is cosine_resemblance.
             search_algorithm: str
                 Options are "DFS" (for depth-first search) and "BFS" (for breadth-first search). It does not have impact on the algorithm.
+            outlier_detection_method: str
+                Options are "max_ratio" and "statistical"
 
         Returns:
             resemblance_matrix: np.ndarray
@@ -144,24 +172,24 @@ class WFR(object):
             clusters: List[List[int]]
                 List of clusters, each cluster is a list of point indices
         """
-        if resemblance_fn is None:
-            resemblance_fn = resemblance_functions.cosine_resemblance
+        # get the resemblance function:
+        resemblance_fn = self.get_resemblance_function()
 
         # Full graph approach:
-        if knn_k is None:
+        if self.knn_k is None:
             # Compute resemblance matrix (n x n)
             R = resemblance_fn(X)
         
         # KNN approach:
         else:
             # use KNN graph
-            match knn_approx_method:
+            match self.knn_approx_method:
                 case None:
-                    R = resemblance_functions.compute_resemblance_by_knn_sklearn(X_train=X, knn_k=knn_k, knn_sklearn_algorithm=knn_sklearn_algorithm, resemblance_fn=resemblance_fn)
+                    R = resemblance_functions.compute_resemblance_by_knn_sklearn(X_train=X, knn_k=self.knn_k, knn_sklearn_algorithm=self.knn_sklearn_algorithm, resemblance_fn=resemblance_fn)
                 case "faiss":
-                    R = resemblance_functions.compute_resemblance_by_knn_faiss(X_train=X, knn_k=knn_k, resemblance_fn=resemblance_fn)
+                    R = resemblance_functions.compute_resemblance_by_knn_faiss(X_train=X, knn_k=self.knn_k, resemblance_fn=resemblance_fn)
                 case "hnsw":
-                    R = resemblance_functions.compute_resemblance_by_knn_hnsw(X_train=X, knn_k=knn_k, resemblance_fn=resemblance_fn)
+                    R = resemblance_functions.compute_resemblance_by_knn_hnsw(X_train=X, knn_k=self.knn_k, resemblance_fn=resemblance_fn)
 
         # Normalize to [0, 1]
         r_min = R.min()
@@ -172,7 +200,7 @@ class WFR(object):
             R_norm = np.zeros_like(R)
 
         # Threshold
-        R_thresh = np.where(R_norm >= resemblance_threshold, R_norm, 0.0)
+        R_thresh = np.where(R_norm >= self.resemblance_threshold, R_norm, 0.0)
 
         # Build graph adjacency (boolean)
         adjacency = R_thresh > 0
@@ -218,11 +246,15 @@ class WFR(object):
                 clusters.append(cluster)
                 cluster_id += 1
 
-        # optionally mark singleton clusters as -1
-        if mark_outliers_as_minus_one:
-            for cluster in clusters:
-                if len(cluster) == 1:
-                    labels[cluster[0]] = -1
+        # optionally mark outlier points as label -1
+        if self.mark_outliers_as_minus_one:
+            if outlier_detection_method == "max_ratio":
+                cluster_indices_to_be_removed = clustering_scores.find_very_small_max_ratio(nums=[len(cluster) for cluster in clusters], ratio=0.05)
+            elif outlier_detection_method == "statistical":
+                cluster_indices_to_be_removed = clustering_scores.find_very_small_statistical(nums=[len(cluster) for cluster in clusters], k=2)
+            for cluster_index, cluster in enumerate(clusters):
+                if cluster_index in cluster_indices_to_be_removed:
+                    labels[cluster] = -1
 
         return R, labels, clusters
 
