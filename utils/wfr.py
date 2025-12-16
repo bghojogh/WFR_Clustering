@@ -149,14 +149,16 @@ class WFR(object):
         max_values = R_new_norm[np.arange(X_test.shape[0]), max_indices]
 
         # Assign label if max resemblance >= threshold
-        above_threshold = max_values >= self.resemblance_threshold
+        if self.mark_outliers_as_minus_one:
+            above_threshold = max_values >= self.resemblance_threshold
+        else:
+            above_threshold = np.ones_like(max_values, dtype=bool)
         labels_test[above_threshold] = self.labels_[max_indices[above_threshold]]
 
         # set the adjacency-test matrix:
         self.adjacency_test_ = np.zeros((X_test.shape[0], X_train.shape[0]))
         for i in range(X_test.shape[0]):
             if above_threshold[i]:
-                print(max_indices[i])
                 self.adjacency_test_[i, max_indices[i]] = 1
 
         return labels_test
