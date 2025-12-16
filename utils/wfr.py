@@ -61,6 +61,7 @@ class WFR(object):
         self.R_min_ = None
         self.R_max_ = None
         self.adjacency_ = None
+        self.adjacency_test_ = None
 
 
     def fit(self, X: np.ndarray) -> object:
@@ -130,11 +131,11 @@ class WFR(object):
             # use KNN graph
             match self.knn_approx_method:
                 case None:
-                    R_new = resemblance_functions.compute_resemblance_by_knn_sklearn(X_train=X, X_test=X_test, knn_k=knn_k, knn_sklearn_algorithm=self.knn_sklearn_algorithm, resemblance_fn=resemblance_fn)
+                    R_new = resemblance_functions.compute_resemblance_by_knn_sklearn(X_train=X_train, X_test=X_test, knn_k=self.knn_k, knn_sklearn_algorithm=self.knn_sklearn_algorithm, resemblance_fn=resemblance_fn)
                 case "faiss":
-                    R_new = resemblance_functions.compute_resemblance_by_knn_faiss(X_train=X, X_test=X_test, knn_k=knn_k, resemblance_fn=resemblance_fn)
+                    R_new = resemblance_functions.compute_resemblance_by_knn_faiss(X_train=X_train, X_test=X_test, knn_k=self.knn_k, resemblance_fn=resemblance_fn)
                 case "hnsw":
-                    R_new = resemblance_functions.compute_resemblance_by_knn_hnsw(X_train=X, X_test=X_test, knn_k=knn_k, resemblance_fn=resemblance_fn)
+                    R_new = resemblance_functions.compute_resemblance_by_knn_hnsw(X_train=X_train, X_test=X_test, knn_k=self.knn_k, resemblance_fn=resemblance_fn)
 
         # Normalize using training min/max
         R_new_norm = (R_new - self.R_min_) / (self.R_max_ - self.R_min_)
@@ -148,6 +149,13 @@ class WFR(object):
         # Assign label if max resemblance >= threshold
         above_threshold = max_values >= self.resemblance_threshold
         labels_test[above_threshold] = self.labels_[max_indices[above_threshold]]
+
+        # set the adjacency-test matrix:
+        self.adjacency_test_ = np.zeros((X_test.shape[0], X_train.shape[0]))
+        for i in range(X_test.shape[0]):
+            if above_threshold[i]:
+                print(max_indices[i])
+                self.adjacency_test_[i, max_indices[i]] = 1
 
         return labels_test
 
