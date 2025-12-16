@@ -60,6 +60,7 @@ class WFR(object):
         self.R_matrix_ = None
         self.R_min_ = None
         self.R_max_ = None
+        self.adjacency_ = None
 
 
     def fit(self, X: np.ndarray) -> object:
@@ -70,23 +71,25 @@ class WFR(object):
             X = X - X_mean
         
         if self.resemblance_threshold is not None:
-            R, labels, _ =self.compute_resemblance_and_clusters(X=X)
+            R, labels, _, adjacency =self.compute_resemblance_and_clusters(X=X)
         else:
-            clustering_scores_list, labels_list, R_list = [], [], []
+            clustering_scores_list, labels_list, R_list, adjacency_list = [], [], [], []
             for resemblance_threshold in tqdm(np.arange(1.0, 0-self.resemblance_threshold_grid_search_step, -self.resemblance_threshold_grid_search_step), desc="Grid search for resemblance threshold"):
                 self.resemblance_threshold = resemblance_threshold
-                R, labels, _ =self.compute_resemblance_and_clusters(X=X)
+                R, labels, _, adjacency =self.compute_resemblance_and_clusters(X=X)
                 clustering_score1 = clustering_scores.graph_cluster_separation_score(X=X[labels!=-1, :], labels=labels[labels!=-1], k=10, eps=1e-8)
                 clustering_score2 = clustering_scores.cluster_size_score(labels=labels[labels!=-1], min_frac=0.05, alpha=2.0)
                 clustering_scores_list.append(clustering_score1 + clustering_score2)
                 labels_list.append(labels)
                 R_list.append(R)
+                adjacency_list.append(adjacency)
 
             # choose the best clustering score:
             # print(clustering_scores_list)  # uncomment for debugging
             best_clustering_index = np.argmax(clustering_scores_list)
             labels = labels_list[best_clustering_index]
             R = R_list[best_clustering_index]
+            adjacency = adjacency_list[best_clustering_index]
 
         self.X_ = X
         self.labels_ = labels
@@ -94,6 +97,7 @@ class WFR(object):
         self.R_matrix_ = R
         self.R_min_ = self.R_matrix_.min()
         self.R_max_ = self.R_matrix_.max()
+        self.adjacency_ = adjacency
         return self
 
 
@@ -175,7 +179,7 @@ class WFR(object):
         X: np.ndarray,
         search_algorithm: Optional[str] = "DFS",
         outlier_detection_method: Optional[str] = "max_ratio"
-    ) -> Tuple[np.ndarray, List[int], List[List[int]]]:
+    ) -> Tuple[np.ndarray, List[int], List[List[int]], np.ndarray[bool]]:
         """
         Args:
             X: np.ndarray
@@ -192,6 +196,8 @@ class WFR(object):
                 List of labels of the n points
             clusters: List[List[int]]
                 List of clusters, each cluster is a list of point indices
+            adjacency: np.ndarray[bool]
+                The adjacency matrix of the data points, based on the thresholded resemblances
         """
         # get the resemblance function:
         resemblance_fn = self.get_resemblance_function()
@@ -284,7 +290,7 @@ class WFR(object):
                 for old, new in label_mapping.items():
                     labels[labels == old] = new
 
-        return R, labels, clusters
+        return R, labels, clusters, adjacency
 
 
 # test:
