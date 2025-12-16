@@ -9,7 +9,7 @@ class WFR(object):
     
     def __init__(
             self, 
-            resemblance_measure: Optional[str] = "cosine",
+            resemblance_measure: Optional[str] = "log_based",
             resemblance_threshold: Optional[float] = None,
             resemblance_threshold_grid_search_step: Optional[float] = 0.01,
             mark_outliers_as_minus_one: Optional[bool] = False,
@@ -23,7 +23,7 @@ class WFR(object):
             resemblance_measure: str, optional
                 The measure for calculating resemblance of data points.
                 Defaults to cosine similarity.
-                Options: cosine, kernel
+                Options: log_based, cosine, kernel
             resemblance_threshold: float, optional
                 Value in [0, 1] for thresholding normalized resemblance matrix.
                 If not provided, automatic threshold is used, but that will slow down the clustering. 
@@ -150,6 +150,8 @@ class WFR(object):
 
     def get_resemblance_function(self) -> Callable:
         match self.resemblance_measure:
+            case "log_based":
+                resemblance_fn = resemblance_functions.log_based_resemblance
             case "cosine":
                 resemblance_fn = resemblance_functions.cosine_resemblance
             case "kernel":

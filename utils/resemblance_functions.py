@@ -33,6 +33,43 @@ def cosine_resemblance(X: np.ndarray, X2: Optional[np.ndarray] = None) -> np.nda
     return R_resemblance
 
 
+def log_based_resemblance(
+    X: np.ndarray,
+    X2: Optional[np.ndarray] = None,
+    eps: float = 1e-6
+) -> np.ndarray:
+    """
+    Logarithmic distance-based resemblance.
+
+    R(x, y) = 1 / (1 + log(||x - y|| + 1 + eps))
+    Ensures positive resemblance bounded in (0,1].
+    """
+
+    # cast to float
+    X = X.astype(float)
+    if X2 is not None:
+        X2 = X2.astype(float)
+
+    # squared norms
+    sq_norms_X = np.sum(X**2, axis=1, keepdims=True)
+
+    if X2 is not None:
+        sq_norms_X2 = np.sum(X2**2, axis=1, keepdims=True)
+        D2 = sq_norms_X + sq_norms_X2.T - 2 * (X @ X2.T)
+    else:
+        D2 = sq_norms_X + sq_norms_X.T - 2 * (X @ X.T)
+
+    # numerical stability
+    D2 = np.maximum(D2, 0.0)
+
+    # Euclidean distances
+    D = np.sqrt(D2)
+
+    # log-based resemblance
+    R_resemblance = 1.0 / (1.0 + np.log(D + 1.0 + eps))
+    return R_resemblance
+
+
 def kernel_resemblance(
     X: np.ndarray,
     X2: Optional[np.ndarray] = None,
