@@ -48,6 +48,12 @@ def make_two_spirals(n_points=1000, noise=0.5, factor=0.75, random_points=False)
 # X, y_true = make_moons(n_samples=300, noise=0.05, random_state=42)
 X, y_true = make_two_spirals(n_points=500*2, random_points=False)
 
+# Define the colors using hex codes or RGB tuples (values from 0 to 1).
+# Create the custom colormap using LinearSegmentedColormap.from_list.
+colors = ["#377eb8", "#16dfb0c5", "#d5df16c5", "#ff7f00"] 
+from matplotlib.colors import LinearSegmentedColormap
+custom_cmap = LinearSegmentedColormap.from_list("BlueToOrange", colors, N=256)
+
 # create a 10x10 grid
 fig, axes = plt.subplots(10, 10, figsize=(20, 20))
 axes = axes.flatten()
@@ -83,7 +89,7 @@ for idx, resemblance_threshold in enumerate(tqdm(np.arange(1.0, 0, -resemblance_
     X_inlier = X[labels!=-1, :]
     X_outlier = X[labels==-1, :]
     labels_inlier = labels[labels!=-1]
-    ax.scatter(X_inlier[:,0], X_inlier[:,1], c=labels_inlier, s=10, cmap='tab10')
+    ax.scatter(X_inlier[:,0], X_inlier[:,1], c=labels_inlier, s=10, cmap=custom_cmap)
     ax.scatter(X_outlier[:,0], X_outlier[:,1], c="black", s=10)
 
     # title per subplot
