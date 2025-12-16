@@ -239,11 +239,15 @@ for i_dataset, (dataset, algo_params) in enumerate(tqdm(datasets, "Datasets")):
     mark_outliers_as_minus_one = True
     knn_k = 10
     resemblance_measure = "kernel"   # options: "cosine", "kernel"
-    kernel = "rbf"   # options: cosine, linear, poly, rbf, sigmoid
+    kernel = "rbf"   # options: rbf, sigmoid, poly, cosine, linear --> note: rbf works best
     wfr = WFR(resemblance_threshold=resemblance_threshold, resemblance_measure=resemblance_measure, mark_outliers_as_minus_one=mark_outliers_as_minus_one, knn_k=knn_k, kernel=kernel)
+    if resemblance_measure == "kernel":
+        wfr_algorithm_name = "Kernel WFR"
+    else:
+        wfr_algorithm_name = "WFR"
 
     clustering_algorithms = (
-        ("WFR", wfr),
+        (wfr_algorithm_name, wfr),
         ("KMeans", two_means),
         ("Affinity\nPropagation", affinity_propagation),
         ("MeanShift", ms),
