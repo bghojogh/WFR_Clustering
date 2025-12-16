@@ -42,9 +42,15 @@ def make_two_spirals(n_points=1000, noise=0.5, factor=0.75, random_points=False)
 
     return X, y
 
-# Generate two moons dataset
-# X, y_true = make_moons(n_samples=300, noise=0.05, random_state=42)
-X, y_true = make_two_spirals(n_points=500*2, random_points=False)
+# Generate dataset
+load_dataset_from_disk = False
+if load_dataset_from_disk:
+    X = np.load("./X.npy")
+    y_true = np.load("./y_true.npy")
+else:
+    X, y_true = make_two_spirals(n_points=500*2, random_points=False)
+    np.save("./X.npy", X)
+    np.save("./y_true.npy", y_true)
 
 # Define the colors using hex codes or RGB tuples (values from 0 to 1).
 # Create the custom colormap using LinearSegmentedColormap.from_list.
