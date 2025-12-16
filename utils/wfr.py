@@ -74,7 +74,7 @@ class WFR(object):
         if self.resemblance_threshold is not None:
             R, labels, _, adjacency =self.compute_resemblance_and_clusters(X=X)
         else:
-            clustering_scores_list, labels_list, R_list, adjacency_list = [], [], [], []
+            clustering_scores_list, labels_list, R_list, adjacency_list, resemblance_threshold_list = [], [], [], [], []
             for resemblance_threshold in tqdm(np.arange(1.0, 0-self.resemblance_threshold_grid_search_step, -self.resemblance_threshold_grid_search_step), desc="Grid search for resemblance threshold"):
                 self.resemblance_threshold = resemblance_threshold
                 R, labels, _, adjacency =self.compute_resemblance_and_clusters(X=X)
@@ -84,6 +84,7 @@ class WFR(object):
                 labels_list.append(labels)
                 R_list.append(R)
                 adjacency_list.append(adjacency)
+                resemblance_threshold_list.append(resemblance_threshold)
 
             # choose the best clustering score:
             # print(clustering_scores_list)  # uncomment for debugging
@@ -91,6 +92,7 @@ class WFR(object):
             labels = labels_list[best_clustering_index]
             R = R_list[best_clustering_index]
             adjacency = adjacency_list[best_clustering_index]
+            self.resemblance_threshold = resemblance_threshold_list[best_clustering_index]
 
         self.X_ = X
         self.labels_ = labels
