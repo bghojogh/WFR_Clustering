@@ -42,6 +42,9 @@ def make_two_spirals(n_points=1000, noise=0.5, factor=0.75, random_points=False)
     return X, y
 
 def draw_ovals(ax, X_spiral, scale_major=1.2, scale_minor=0.4, offset=0.0):
+    """
+    For each neighboring two points in the spirals, it circles them by an oval where the two points are its two centers.
+    """
     for i in range(len(X_spiral) - 1):
         p1 = X_spiral[i]
         p2 = X_spiral[i + 1]
