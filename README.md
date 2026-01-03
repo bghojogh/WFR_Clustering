@@ -1,5 +1,15 @@
-# WFR_Clustering
+# WFR Clustering
 The Wittgenstein's Family Resemblance (WFR) clustering algorithm
+
+[![arXiv](https://img.shields.io/badge/arXiv-2211.01369-f9f107.svg)](https://arxiv.org/abs/2211.01369)
+
+This is the code for the following paper: 
+- Golbahar Amanpour, Benyamin Ghojogh. "Wittgenstein's Family Resemblance Clustering Algorithm", arXiv preprint arXiv:2211.01369, 2026.
+- Link to paper: https://arxiv.org/abs/2211.01369 
+
+# Simulation on toy benchmarks
+
+![A screenshot of the project](./img/toy_example1/benchmarks.png)
 
 # Installing the environments
 
