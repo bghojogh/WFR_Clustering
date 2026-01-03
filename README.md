@@ -18,6 +18,33 @@ Install the packages in a conda environment:
 conda env create --file environment.yml
 ```
 
+# Functions of the WFR Class
+
+This is a Scikit-learn–compatible implementation of the WFR algorithm: 
+- Class:
+```python
+wfr = WFR(resemblance_measure: Optional[str] = "log_based",
+        resemblance_threshold: Optional[float] = None,
+        resemblance_threshold_grid_search_step: Optional[float] = 0.01,
+        mark_outliers_as_minus_one: Optional[bool] = False,
+        knn_k: Optional[int] = 10,
+        knn_sklearn_algorithm: Optional[str] = "auto",
+        knn_approx_method: Optional[str] = None,
+        kernel: Optional[str] = "rbf")
+```
+- Fitting (training):
+```python
+wfr.fit(X: np.ndarray)
+```
+- Fitting (training) and predicting:
+```python
+y_pred = wfr.fit_predict(X: np.ndarray)
+```
+- Predicting:
+```python
+y_pred = wfr.predict(X: np.ndarray)
+```
+
 # How to use this code
 
 - Set the config in `./config/config.yaml`
