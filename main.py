@@ -15,6 +15,8 @@ def main(config: dict):
         os.makedirs(Path(config['test_data_path']).parent, exist_ok=True)
         pd.DataFrame(X_train).to_csv(config['traininig_data_path'], index=False)
         pd.DataFrame(X_test).to_csv(config['test_data_path'], index=False)
+    else:
+        y_train_true, y_test_true = None, None
 
     # load data:
     X_train = pd.read_csv(config['traininig_data_path']).to_numpy()
@@ -35,22 +37,24 @@ def main(config: dict):
     
     # training: 
     y_pred_training = wfr.fit_predict(X=X_train)
-    print("True labels of training: ", y_train_true)
     print("Predicted labels of training: ", y_pred_training)
-    accuracy_train = accuracy_score(y_train_true, y_pred_training)
-    f1_train = f1_score(y_train_true, y_pred_training)
-    print("Training accuracy:", accuracy_train)
-    print("Training F1-score:", f1_train)
+    if y_train_true is not None:
+        print("True labels of training: ", y_train_true)
+        accuracy_train = accuracy_score(y_train_true, y_pred_training)
+        f1_train = f1_score(y_train_true, y_pred_training)
+        print("Training accuracy:", accuracy_train)
+        print("Training F1-score:", f1_train)
     
     # test (out of sample):
     if X_test is not None:
         y_pred_test = wfr.predict(X=X_test)
-        print("True labels of test: ", y_test_true)
         print("Predicted labels of test: ", y_pred_test)
-        accuracy_test = accuracy_score(y_test_true, y_pred_test)
-        f1_test = f1_score(y_test_true, y_pred_test)
-        print("Test accuracy:", accuracy_test)
-        print("Test F1-score:", f1_test)
+        if y_test_true is not None:
+            print("True labels of test: ", y_test_true)
+            accuracy_test = accuracy_score(y_test_true, y_pred_test)
+            f1_test = f1_score(y_test_true, y_pred_test)
+            print("Test accuracy:", accuracy_test)
+            print("Test F1-score:", f1_test)
 
 
 if __name__ == "__main__":
