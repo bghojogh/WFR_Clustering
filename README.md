@@ -1,2 +1,56 @@
 # WFR_Clustering
 The Wittgenstein's Family Resemblance (WFR) clustering algorithm
+
+# Installing the environments
+
+Install the packages in a conda environment: 
+```bash
+conda env create --file environment.yml
+```
+
+# How to use this code
+
+- Set the config in `./config/config.yaml`
+```yaml
+# data paths:
+traininig_data_path: ./files/X_train.csv
+test_data_path: ./files/X_test.csv
+make_toy_data: false  # if true, a toy dataset will be made and used for training and test. 
+
+resemblance_measure: log_based
+# The measure for calculating resemblance of data points.
+# Defaults to cosine similarity.
+# Options: log_based, cosine, kernel
+
+resemblance_threshold: null
+# Value in [0, 1] for thresholding normalized resemblance matrix.
+# If not provided, automatic threshold is used, but that will slow down the clustering. 
+
+resemblance_threshold_grid_search_step: 0.01
+# Value in [0, 1] for the step of grid search for the best resemblance_threshold.
+# This is used only when resemblance_threshold is None (not provided).
+
+mark_outliers_as_minus_one: true
+# Whether to mark outliers as -1 or not (as singleton clusters).
+
+knn_k: 10
+# Use KNN graph with this many neighbors.
+# If given as None, all points are used, i.e., k=n 
+
+knn_sklearn_algorithm: auto
+# algorithm used in KNN of sklearn: {'auto', 'ball_tree', 'kd_tree', 'brute'}
+
+kernel: rbf
+# Used only when resemblance_measure="kernel"
+# Options are cosine, linear, poly, rbf, sigmoid
+```
+- Run the code: 
+```bash
+conda activate wfr
+python main.py
+```
+- If you want to run the toy examples, run this:
+```bash
+conda activate wfr
+python toy_example.py
+```
