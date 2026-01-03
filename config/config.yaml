@@ -1,0 +1,36 @@
+# data paths:
+traininig_data_path: ./files/X_train.csv
+test_data_path: ./files/X_test.csv
+make_toy_data: false  # if true, a toy dataset will be made and used for training and test. 
+
+resemblance_measure: log_based
+# The measure for calculating resemblance of data points.
+# Defaults to cosine similarity.
+# Options: log_based, cosine, kernel
+
+resemblance_threshold: null
+# Value in [0, 1] for thresholding normalized resemblance matrix.
+# If not provided, automatic threshold is used, but that will slow down the clustering. 
+
+resemblance_threshold_grid_search_step: 0.01
+# Value in [0, 1] for the step of grid search for the best resemblance_threshold.
+# This is used only when resemblance_threshold is None (not provided).
+
+mark_outliers_as_minus_one: false
+# Whether to mark outliers as -1 or not (as singleton clusters).
+
+knn_k: 10
+# Use KNN graph with this many neighbors.
+# If given as None, all points are used, i.e., k=n 
+
+knn_sklearn_algorithm: auto
+# algorithm used in KNN of sklearn: {'auto', 'ball_tree', 'kd_tree', 'brute'}
+
+knn_approx_method: null
+# Options are None (for no approximation), "faiss" (Facebook AI Similarity Search), "hnsw" (Hierarchical Navigable Small World)
+# Note that FAISS and HNSW are useful especially for large n (sample size) and high d (dimensionality), giving sublinear search time. 
+# It can be used only when resemblance_fn is cosine_resemblance.
+
+kernel: rbf
+# Used only when resemblance_measure="kernel"
+# Options are cosine, linear, poly, rbf, sigmoid
