@@ -1,11 +1,11 @@
 # WFR Clustering
 The Wittgenstein's Family Resemblance (WFR) clustering algorithm
 
-[![arXiv](https://img.shields.io/badge/arXiv-2211.01369-f9f107.svg)](https://arxiv.org/abs/2211.01369)
+[![arXiv](https://img.shields.io/badge/arXiv-2601.01127-f9f107.svg)](https://arxiv.org/abs/2601.01127)
 
 This is the code for the following paper: 
-- Golbahar Amanpour, Benyamin Ghojogh. "Wittgenstein's Family Resemblance Clustering Algorithm", arXiv preprint arXiv:2211.01369, 2026.
-- Link to paper: https://arxiv.org/abs/2211.01369 
+- Golbahar Amanpour, Benyamin Ghojogh. "Wittgenstein's Family Resemblance Clustering Algorithm", arXiv preprint arXiv:2601.01127, 2026.
+- Link to paper: https://arxiv.org/abs/2601.01127
 
 # Simulation on toy benchmarks
 
